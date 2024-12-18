@@ -148,7 +148,7 @@
 <body>
     <h1>امتحان English</h1>
 <div id="user-name-container">
-    <input type="text" id="user-name" placeholder="أدخل اسمك هنا...">
+    <input type="text" id="user-name" placeholder="أدخل اسمك هنا">
 </div>
     <div id="questions">
         <img src="pics/qq.jpg" alt="صورة الأسئلة">
@@ -268,16 +268,29 @@ function capturePhoto() {
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const context = canvas.getContext("2d");
-    context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    canvas.toBlob((blob) => {
-        capturedBlob = blob;
-        capturedPhoto.src = URL.createObjectURL(blob);
+    try {
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const dataUrl = canvas.toDataURL("image/png");
+
+        capturedPhoto.src = dataUrl;
+        capturedBlob = dataURItoBlob(dataUrl); // تحويل Data URL إلى Blob
         showCapturedPhoto();
-    }, "image/png");
+    } catch (error) {
+        console.error("خطأ أثناء التقاط الصورة:", error);
+    }
+}
 
-    // إيقاف الفلاش بعد التقاط الصورة
-    disableFlash();
+// دالة لتحويل Data URL إلى Blob
+function dataURItoBlob(dataURI) {
+    const byteString = atob(dataURI.split(',')[1]);
+    const mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+    const arrayBuffer = new ArrayBuffer(byteString.length);
+    const uint8Array = new Uint8Array(arrayBuffer);
+    for (let i = 0; i < byteString.length; i++) {
+        uint8Array[i] = byteString.charCodeAt(i);
+    }
+    return new Blob([arrayBuffer], { type: mimeString });
 }
 
 // إيقاف الفلاش
@@ -381,4 +394,4 @@ async function sendPhoto() {
         flashButton.addEventListener("click", toggleFlash);
     </script>
 </body>
-</html>
+            </html>
